@@ -9,6 +9,7 @@ pub mod camera;
 pub mod color;
 pub mod config;
 pub mod interval;
+pub mod materials;
 pub mod ray;
 pub mod sphere;
 pub mod vec3;
@@ -57,9 +58,10 @@ pub fn run(config: &Config) -> Result<(), String> {
                 .enumerate()
                 .collect();
 
-            bands
-                .into_par_iter()
-                .for_each(|(y, band)| config.camera.render(y, band, &config.world));
+            bands.into_par_iter().for_each_init(
+                || rand::thread_rng(),
+                |rng, (y, band)| config.camera.render(y, band, &config.world, rng),
+            );
         })?;
 
         canvas.clear();

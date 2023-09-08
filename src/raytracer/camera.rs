@@ -1,9 +1,9 @@
 use rand::rngs::ThreadRng;
-use rand::thread_rng;
 use rand::Rng;
 
 use super::color::*;
 use super::interval::Interval;
+use super::materials::Scatterable;
 use super::ray::*;
 use super::vec3::*;
 
@@ -15,13 +15,20 @@ pub struct Camera {
     pub du: Vec3,
     pub dv: Vec3,
     pub sample_size: u32,
+    pub max_depth: u32,
 }
 
 impl Camera {
-    pub fn new(width: usize, height: usize, origin: Vec3, sample_size: u32) -> Self {
-        let focal_length = width as f64 / 2.0;
-        let u = vec3!(width as f64, 0.0, 0.0);
-        let v = vec3!(0.0, -(height as f64), 0.0);
+    pub fn new(
+        img_width: usize,
+        img_height: usize,
+        origin: Vec3,
+        sample_size: u32,
+        max_depth: u32,
+    ) -> Self {
+        let focal_length = img_width as f64 / 2.0;
+        let u = vec3!(img_width as f64, 0.0, 0.0);
+        let v = vec3!(0.0, -(img_height as f64), 0.0);
         let du = vec3!(1.0, 0.0, 0.0);
         let dv = vec3!(0.0, -1.0, 0.0);
 
@@ -29,19 +36,20 @@ impl Camera {
         let pixel00 = viewport_upper_left + (du + dv) * 0.5;
 
         Self {
-            width,
-            height,
+            width: img_width,
+            height: img_height,
             origin,
             pixel00,
             du,
             dv,
             sample_size,
+            max_depth,
         }
     }
 
-    pub fn ray(&self, x: usize, y: usize, mut rng: &mut ThreadRng) -> Ray {
+    pub fn ray(&self, x: usize, y: usize, rng: &mut ThreadRng) -> Ray {
         let pixel_center = self.pixel00 + self.dv * (y as f64) + self.du * (x as f64);
-        let sample = pixel_center + self.pixel_sample_square(&mut rng);
+        let sample = pixel_center + self.pixel_sample_square(rng);
         let direction = sample - self.origin;
         Ray::new(self.origin, direction)
     }
@@ -52,29 +60,49 @@ impl Camera {
         return (px * self.du) + (py * self.dv);
     }
 
-    pub fn render(&self, y: usize, band: &mut [u8], world: &Vec<Box<dyn Hittable + Sync>>) {
-        let mut rng = thread_rng();
+    pub fn render(
+        &self,
+        y: usize,
+        band: &mut [u8],
+        world: &Vec<Box<dyn Hittable>>,
+        rng: &mut ThreadRng,
+    ) {
         for x in 0..self.width {
             let mut color = Color::new(0.0, 0.0, 0.0);
             for _ in 0..self.sample_size {
-                let ray = self.ray(x, y, &mut rng);
-                color += Self::ray_color(&ray, world);
+                let ray = self.ray(x, y, rng);
+                color += Self::ray_color(&ray, world, self.max_depth, rng);
             }
-            Self::write_pixel(band, x, color / self.sample_size);
+            let c = (color / self.sample_size).linear_to_gamma();
+            Self::write_pixel(band, x, c);
         }
     }
 
-    fn ray_color(ray: &Ray, world: &Vec<Box<dyn Hittable + Sync>>) -> Color {
-        let hit = world.hit(ray, Interval::new(0.0, f64::INFINITY));
+    fn ray_color(
+        ray: &Ray,
+        world: &Vec<Box<dyn Hittable>>,
+        depth: u32,
+        rng: &mut ThreadRng,
+    ) -> Color {
+        if depth <= 0 {
+            return Color::new(0.0, 0.0, 0.0);
+        }
+
+        let hit = world.hit(ray, Interval::new(0.001, f64::INFINITY));
         match hit {
-            Some(hit_record) => {
-                let c = 0.5 * (1.0 + hit_record.normal);
-                return Color::new(c.x(), c.y(), c.z());
+            Some(rec) => {
+                let scattered = rec.material.scatter(ray, &rec, rng);
+                match scattered {
+                    Some((sc_ray, albedo)) => {
+                        albedo * Self::ray_color(&sc_ray, world, depth - 1, rng)
+                    }
+                    None => return Color::new(0.0, 0.0, 0.0),
+                }
             }
             None => {
                 // sky
-                let a = (ray.direction.unit_vec().y() + 1.0) * 0.5;
-                (1.0 - a) * Color::new(1.0, 1.0, 1.0) + a * Color::new(0.5, 0.7, 1.0)
+                let a = (ray.direction.unit_vec().y + 1.0) * 0.5;
+                return (1.0 - a) * Color::new(1.0, 1.0, 1.0) + a * Color::new(0.5, 0.7, 1.0);
             }
         }
     }

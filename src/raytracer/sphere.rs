@@ -1,15 +1,23 @@
+use std::sync::Arc;
+
 use super::interval::Interval;
+use super::materials::Material;
 use super::ray::*;
 use super::vec3::Vec3;
 
 pub struct Sphere {
     center: Vec3,
     radius: f64,
+    material: Arc<Material>,
 }
 
 impl Sphere {
-    pub fn new(center: Vec3, radius: f64) -> Self {
-        Self { center, radius }
+    pub fn new(center: Vec3, radius: f64, material: Arc<Material>) -> Self {
+        Self {
+            center,
+            radius,
+            material,
+        }
     }
 }
 
@@ -36,6 +44,6 @@ impl Hittable for Sphere {
 
         let p = ray.at(root);
         let normal = (p - self.center) / self.radius;
-        return Some(HitRecord::new(root, ray, p, normal));
+        return Some(HitRecord::new(root, ray, p, normal, &self.material));
     }
 }

@@ -1,5 +1,6 @@
 use auto_ops::*;
 
+#[derive(Clone, Copy)]
 pub struct Color {
     pub r: f64,
     pub g: f64,
@@ -12,15 +13,21 @@ impl Color {
     }
 
     pub fn avg_by_samples(&self, samples: u32) -> Self {
-        Self {
-            r: self.r / samples as f64,
-            g: self.g / samples as f64,
-            b: self.b / samples as f64,
-        }
+        Self::new(
+            self.r / samples as f64,
+            self.g / samples as f64,
+            self.b / samples as f64,
+        )
+    }
+
+    pub fn linear_to_gamma(&self) -> Self {
+        Self::new(self.r.sqrt(), self.g.sqrt(), self.b.sqrt())
     }
 }
 
 impl_op_ex!(+|a: &Color, b: &Color| -> Color { Color::new(a.r + b.r, a.g + b.g, a.b + b.b) });
+
+impl_op_ex!(*|a: &Color, b: &Color| -> Color { Color::new(a.r * b.r, a.g * b.g, a.b * b.b) });
 
 impl_op_ex!(*|a: f64, b: &Color| -> Color { Color::new(a * b.r, a * b.g, a * b.b) });
 

@@ -7,7 +7,7 @@ pub struct Config {
     pub width: usize,
     pub height: usize,
     pub camera: Camera,
-    pub world: Vec<Box<dyn Hittable + Sync>>,
+    pub world: Vec<Box<dyn Hittable>>,
 }
 
 impl Config {
@@ -15,13 +15,13 @@ impl Config {
         title: &'static str,
         width: usize,
         height: usize,
-        world: Vec<Box<dyn Hittable + Sync>>,
+        world: Vec<Box<dyn Hittable>>,
     ) -> Self {
         Self {
             title,
             width,
             height,
-            camera: Camera::new(width, height, vec3!(0.0, 0.0, 0.0), 8),
+            camera: Camera::new(width, height, vec3!(0.0, 0.0, 0.0), 20, 20),
             world,
         }
     }
