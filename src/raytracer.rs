@@ -54,7 +54,7 @@ pub fn run(config: &Config) -> Result<(), String> {
 
         texture.with_lock(None, |buffer: &mut [u8], _| {
             let bands: Vec<(usize, &mut [u8])> = buffer
-                .chunks_mut(config.camera.width * 3)
+                .chunks_mut(config.camera.img_width * 3)
                 .enumerate()
                 .collect();
 

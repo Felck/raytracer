@@ -8,37 +8,55 @@ use super::ray::*;
 use super::vec3::*;
 
 pub struct Camera {
-    pub width: usize,
-    pub height: usize,
-    pub origin: Vec3,
-    pub pixel00: Vec3,
-    pub du: Vec3,
-    pub dv: Vec3,
-    pub sample_size: u32,
-    pub max_depth: u32,
+    pub img_width: usize,
+    pub img_height: usize,
+    origin: Vec3,
+    u: Vec3,
+    v: Vec3,
+    w: Vec3,
+    pixel00: Vec3,
+    du: Vec3,
+    dv: Vec3,
+    sample_size: u32,
+    max_depth: u32,
 }
 
 impl Camera {
     pub fn new(
         img_width: usize,
         img_height: usize,
-        origin: Vec3,
+        look_from: Vec3,
+        look_at: Vec3,
+        vup: Vec3,
+        vfov: f64,
         sample_size: u32,
         max_depth: u32,
     ) -> Self {
-        let focal_length = img_width as f64 / 2.0;
-        let u = vec3!(img_width as f64, 0.0, 0.0);
-        let v = vec3!(0.0, -(img_height as f64), 0.0);
-        let du = vec3!(1.0, 0.0, 0.0);
-        let dv = vec3!(0.0, -1.0, 0.0);
+        let focal_length = (look_from - look_at).length();
+        let h = (vfov.to_radians() / 2.0).tan();
+        let vp_height = 2.0 * h * focal_length;
+        let vp_width = vp_height * (img_width as f64 / img_height as f64);
 
-        let viewport_upper_left = origin - vec3!(0.0, 0.0, focal_length) - u / 2.0 - v / 2.0;
-        let pixel00 = viewport_upper_left + (du + dv) * 0.5;
+        let w = (look_from - look_at).unit_vec();
+        let u = vup.cross(&w).unit_vec();
+        let v = w.cross(&u);
+
+        let vp_u = vp_width * u;
+        let vp_v = vp_height * -v;
+
+        let du = vp_u / img_width as f64;
+        let dv = vp_v / img_height as f64;
+
+        let viewport_upper_left = look_from - (focal_length * w) - vp_u / 2.0 - vp_v / 2.0;
+        let pixel00 = viewport_upper_left + 0.5 * (du + dv);
 
         Self {
-            width: img_width,
-            height: img_height,
-            origin,
+            img_width,
+            img_height,
+            origin: look_from,
+            u,
+            v,
+            w,
             pixel00,
             du,
             dv,
@@ -67,7 +85,7 @@ impl Camera {
         world: &Vec<Box<dyn Hittable>>,
         rng: &mut ThreadRng,
     ) {
-        for x in 0..self.width {
+        for x in 0..self.img_width {
             let mut color = Color::new(0.0, 0.0, 0.0);
             for _ in 0..self.sample_size {
                 let ray = self.ray(x, y, rng);

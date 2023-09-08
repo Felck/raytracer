@@ -28,10 +28,10 @@ pub fn main() -> Result<(), String> {
                 100.0,
                 mat_ground.clone(),
             )),
-            Box::new(Sphere::new(vec3!(0.0, 0.0, -1.5), 0.5, diffuse.clone())),
-            Box::new(Sphere::new(vec3!(-1.0, 0.0, -1.5), 0.5, glass.clone())),
-            Box::new(Sphere::new(vec3!(-1.0, 0.0, -1.5), -0.4, glass.clone())),
-            Box::new(Sphere::new(vec3!(1.0, 0.0, -1.5), 0.5, metal.clone())),
+            Box::new(Sphere::new(vec3!(0.0, 0.0, -1.0), 0.5, diffuse.clone())),
+            Box::new(Sphere::new(vec3!(-1.0, 0.0, -1.0), 0.5, glass.clone())),
+            Box::new(Sphere::new(vec3!(-1.0, 0.0, -1.0), -0.4, glass.clone())),
+            Box::new(Sphere::new(vec3!(1.0, 0.0, -1.0), 0.5, metal.clone())),
         ],
     );
     raytracer::run(&config)

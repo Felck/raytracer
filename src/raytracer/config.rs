@@ -21,7 +21,16 @@ impl Config {
             title,
             width,
             height,
-            camera: Camera::new(width, height, vec3!(0.0, 0.0, 0.0), 20, 20),
+            camera: Camera::new(
+                width,
+                height,
+                vec3!(-2.0, 2.0, 1.0),
+                vec3!(0.0, 0.0, -1.0),
+                vec3!(0.0, 1.0, 0.0),
+                90.0,
+                20,
+                20,
+            ),
             world,
         }
     }
