@@ -38,6 +38,18 @@ pub fn run(config: &Config) -> Result<(), String> {
         )
         .map_err(|e| e.to_string())?;
 
+    texture.with_lock(None, |buffer: &mut [u8], _| {
+        let bands: Vec<(usize, &mut [u8])> = buffer
+            .chunks_mut(config.camera.img_width * 3)
+            .enumerate()
+            .collect();
+
+        bands.into_par_iter().for_each_init(
+            || rand::thread_rng(),
+            |rng, (y, band)| config.camera.render(y, band, &config.world, rng),
+        );
+    })?;
+
     let mut event_pump = sdl_context.event_pump()?;
 
     'running: loop {
@@ -51,18 +63,6 @@ pub fn run(config: &Config) -> Result<(), String> {
                 _ => {}
             }
         }
-
-        texture.with_lock(None, |buffer: &mut [u8], _| {
-            let bands: Vec<(usize, &mut [u8])> = buffer
-                .chunks_mut(config.camera.img_width * 3)
-                .enumerate()
-                .collect();
-
-            bands.into_par_iter().for_each_init(
-                || rand::thread_rng(),
-                |rng, (y, band)| config.camera.render(y, band, &config.world, rng),
-            );
-        })?;
 
         canvas.clear();
         canvas.copy(&texture, None, None)?;
